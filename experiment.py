@@ -103,22 +103,24 @@ blank_dur = 0.2
 
 midi_list = [60, 61, 62, 64, 66, 67, 69, 71,
                  72, 73, 74, 76, 78, 79, 81, 83]
-random.shuffle(midi_list)
+random.shuffle(midi_list)  # TODO - move this randomisation into a CodeBlock, otherwise it'll happen every time experiment.py is loaded
 
-def make_participant_midilist_and_nodes():
+
+def make_trial_definitions():
     trial_seq_modified, answer = generate_trial_seq_modified(transition_matrix=transition_matrix, nTrial=nTrial)
 
     # for exp adjustment
-    nodes = []
+    trials = []
     for i, seq in enumerate(trial_seq_modified):
-        nodes.append(
-            Node(definition={
+        trials.append(
+            {
                 "trial_number": i,
-                "notes": [Note(midi_list[k]) for k in seq],
+                "notes": [midi_list[k] for k in seq],
                 "answer": answer[i]
-            })
+            }
         )
-    return nodes
+
+    return trials
 
 
 
@@ -152,21 +154,17 @@ def exposure():
 
 # define ForcedChoiceTrial
 class ForcedChoiceTrial(Trial):
-    time_estimate =
-
-    def finalize_definition(self, definition, experiment, participant):
-        definition["stimuli"] = # Move the logic from make_participant_nodes to here
+    time_estimate = 10
 
     def show_trial(self, experiment, participant):
-        # TO DO - Return a list of pages which corresponds to the full set of 6 stimuli,
-        # so they all go in one trial.
         choices = ['Yes', 'No']
-        random.shuffle(choices)
+        # random.shuffle(choices)  # Don't put randomising code within show_trial, it will cause bugs.
+        # If you want randomisation, put it inside finalize_definition.
         return ModularPage(
             "audio_forced_choice",
             JSSynth(
                 'Does the last tone meet your expectation?',
-                self.node.definition["notes"],
+                [Note(pitch) for pitch in self.definition["notes"]],
                 timbre=InstrumentTimbre("piano"),
                 default_duration=0.23,
                 default_silence=0.2
@@ -179,7 +177,7 @@ class ForcedChoiceTrial(Trial):
         choice_dict = {"No": 0, "Yes": 1}
         return conditional(
             "feedback",
-            lambda participant: choice_dict[participant.answer] == int(self.node.definition["answer"]),
+            lambda participant: choice_dict[participant.answer] == int(self.definition["answer"]),
             InfoPage('Correct!',
                      time_estimate=0.7),
             InfoPage('Error!',
@@ -187,12 +185,11 @@ class ForcedChoiceTrial(Trial):
         )
 
 
-
 def trial_block():
     return for_loop(
         label="present a sequence of 6 tones and force a choice",
-        iterate_over=lambda nodes: random.sample(nodes, nTrial_per_block),
-        logic=lambda node: ForcedChoiceTrial.cue(node),
+        iterate_over=lambda: make_trial_definitions(),
+        logic=lambda trial_definition: ForcedChoiceTrial.cue(trial_definition),
         time_estimate_per_iteration=ForcedChoiceTrial.time_estimate,
         expected_repetitions=nTrial_per_block
     )
@@ -212,7 +209,6 @@ def main_experiment():
         rest(),
         trial_block(),
         rest(),
-        nodes=make_participant_midilist_and_nodes()
     )
 
 
