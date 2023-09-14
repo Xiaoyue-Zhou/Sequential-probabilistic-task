@@ -133,10 +133,7 @@ def exposure():
             "exposure_sequence",
             random_walk(seq_length=int(exposure_dur // (tone_dur + blank_dur)), transition_matrix=transition_matrix)
         )),
-        CodeBlock(lambda participant: participant.var.set(
-            "midi_list",
-            random.shuffle(midi_list)
-        )),
+        CodeBlock(lambda: random.shuffle(midi_list)),
         PageMaker(
             lambda participant: ModularPage(
                 "exposure",
