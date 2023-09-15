@@ -107,39 +107,22 @@ midi_list = [60, 61, 62, 64, 66, 67, 69, 71,
 
 choice = ['Yes', 'No']
 
-
-def make_trial_definitions():
-    trial_seq_modified, answer = generate_trial_seq_modified(transition_matrix=transition_matrix,
-                                                             nTrial=nTrial_per_block)
-
-    # for exp adjustment
-    trials = []
-    for i, seq in enumerate(trial_seq_modified):
-        trials.append(
-            {
-                "trial_number": i,
-                "notes": [midi_list[k] for k in seq],
-                "answer": answer[i],
-                "choice": random.sample(choice, 2)
-            }
-        )
-
-    return trials
-
-
 def exposure():
     return join(
         CodeBlock(lambda participant: participant.var.set(
             "exposure_sequence",
             random_walk(seq_length=int(exposure_dur // (tone_dur + blank_dur)), transition_matrix=transition_matrix)
         )),
-        CodeBlock(lambda: random.shuffle(midi_list)),
+        CodeBlock(lambda participant: participant.var.set(
+            "midi_list",
+            random.sample(midi_list, k=len(midi_list)))
+                  ),
         PageMaker(
             lambda participant: ModularPage(
                 "exposure",
                 JSSynth(
                     "please listen to the 2-min audio carefully, which is important for the following tasks.",
-                    [Note(midi_list[i]) for i in participant.var.exposure_sequence],
+                    [Note(participant.var.midi_list[i]) for i in participant.var.exposure_sequence],
                     timbre=InstrumentTimbre("piano"),
                     default_duration=tone_dur,
                     default_silence=blank_dur
@@ -154,6 +137,26 @@ def exposure():
             time_estimate=9,
         )
     )
+
+
+def make_trial_definitions(participant):
+    trial_seq_modified, answer = generate_trial_seq_modified(transition_matrix=transition_matrix,
+                                                             nTrial=nTrial_per_block)
+    midi_list = participant.var.midi_list
+
+    # for exp adjustment
+    trials = []
+    for i, seq in enumerate(trial_seq_modified):
+        trials.append(
+            {
+                "trial_number": i,
+                "notes": [midi_list[k] for k in seq],
+                "answer": answer[i],
+                "choice": random.sample(choice, 2)
+            }
+        )
+
+    return trials
 
 
 # define ForcedChoiceTrial
@@ -190,7 +193,7 @@ class ForcedChoiceTrial(Trial):
 def trial_block():
     return for_loop(
         label="present a sequence of 6 tones and force a choice",
-        iterate_over=lambda: make_trial_definitions(),
+        iterate_over=lambda participant: make_trial_definitions(participant),
         logic=lambda trial_definition: ForcedChoiceTrial.cue(trial_definition),
         time_estimate_per_iteration=ForcedChoiceTrial.time_estimate,
         expected_repetitions=nTrial_per_block
