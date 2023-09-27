@@ -1,1 +1,4 @@
 psynet@git+https://gitlab.com/PsyNetDev/PsyNet@v10.4.0#egg=psynet
+
+# Includes bugfix for dashboard URL not printing
+dallinger@git+https://github.com/Dallinger/Dallinger@b39f1fc98f320cfec335dec9fc801f3d6749a61a#egg=dallinger
